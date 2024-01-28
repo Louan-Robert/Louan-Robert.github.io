@@ -1,5 +1,6 @@
 // import { ExperiencesLoader } from "./Experiences";
 import Chart from '../node_modules/chart.js/auto'
+import projects from './project.json';
 
 console.log("ui")
 const data = [
@@ -123,6 +124,8 @@ function onResizeNavHidder() {
 }
 
 function init() {
+  console.log("init")
+
   document.getElementById(activePage)?.classList.add(CssClasses.underlined);
 
   window.addEventListener('resize', onResizeNavHidder);
@@ -143,25 +146,28 @@ function init() {
 
 function buildProjects() {
 
-  fetch("/scripts/project.json")
-    .then(response => response.json())
-    .then((_projects) => {
+  import("./project.json")
+    .then((rawProjects) => {
+      let returnedMap : Map<string, Map<string, Project>> = new Map();
+      new Map (Object.entries(rawProjects)).forEach((projects, context)=>{
 
-      Object.keys(_projects).forEach((context) => {
-        let projectsMap: Map<string, Project> = new Map();
+        let tempMap : Map<string, Project>= new Map();
 
-        _projects[context].forEach((p: Project) => {
-          projectsMap.set(p.title, p);
-        });
+        new Map (Object.entries(projects)).forEach((project : Project) => {
+          tempMap.set(project.title, project);
+        })
 
-        projectList.set(context, projectsMap);
+        projectList.set(context, tempMap);
+
       })
+
     })
     .then(() => buildProjectNav());
 
 }
 
 function buildProjectNav() {
+  console.log("buildProjectNav")
   projectList.forEach((projects, context) => {
     let details = document.createElement("details");
     details.addEventListener("toggle", () => onDetailsOpen(details));
@@ -170,10 +176,11 @@ function buildProjectNav() {
 
     summary.innerHTML = context;
     details.appendChild(summary);
-    projects.forEach((project) => {
+
+    projects.forEach((project: Project) => {
       let li = document.createElement("li");
       li.innerHTML = project.title;
-      li.addEventListener("click", ()=>buildProjectHTML([li, summary]));
+      li.addEventListener("click", (e)=>{buildProjectHTML([li, summary]); e.stopPropagation()});
       li.addEventListener("click", hideNavs);
       ul.appendChild(li);
     });
@@ -188,6 +195,8 @@ function buildProjectNav() {
 }
 
 function buildProjectHTML(elementsToUnderline: [HTMLLIElement, HTMLElement]) {
+  console.log("buildProjectHTML")
+
   console.log(elementsToUnderline)
 
   imageIndexToDisplay = 0;
@@ -200,12 +209,6 @@ function buildProjectHTML(elementsToUnderline: [HTMLLIElement, HTMLElement]) {
   let projectClickContext: string = elementsToUnderline[1].innerHTML;
   let projects = projectList.get(projectClickContext);
   let clickedProject = projects?.get(elementsToUnderline[0].innerHTML);
-  console.log(clickedProject)
-  console.log(elementsToUnderline[1].innerText)
-  console.log(elementsToUnderline[0].innerText)
-
-  console.log(projectList)
-
 
   let projectSection = createElement("section");
   appendChildren(projectSection, [
@@ -222,7 +225,7 @@ function buildProjectHTML(elementsToUnderline: [HTMLLIElement, HTMLElement]) {
 
   ]);
 
-  let image = clickedProject?.images[imageIndexToDisplay]
+  let image = clickedProject?.images[imageIndexToDisplay];
   let figureSelectorContainer = createElement("div", null, { class: "figures-container" });
 
   if(image != undefined){
@@ -282,7 +285,7 @@ async function loadProjects(): Promise<Map<string, Project[]>> {
 }
 
 
-function createElement(elementTag: string, innerHTML: string | null = null, attributes: Record<string, string> | null = null): HTMLElement {
+function createElement(elementTag: string, innerHTML: string | null = null, attributes: Record<string, any> | null = null): HTMLElement {
   let element = document.createElement(elementTag);
 
   if (innerHTML != null) {
